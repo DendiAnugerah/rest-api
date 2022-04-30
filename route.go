@@ -2,47 +2,40 @@ package main
 
 import (
 	"encoding/json"
+	"math/rand"
 	"net/http"
+	"rest-api/entity"
+	"rest-api/repository"
 )
-
-type Post struct {
-	Id    int 		`json:"id"`
-	Title string 	`json:"title"`
-	Text  string 	`json:"text"`
-}
 
 var(
-	posts []Post
+	repo repository.PostRepository = repository.NewPostRepository()
 )
-
-func init(){
-	posts = []Post{Post{Id:1, Title: "Title 1", Text: "Text 1"}}
-}
 
 func getPosts(resp http.ResponseWriter, req *http.Request) {
 	resp.Header().Set("Content-type", "application/json")
-	result, err := json.Marshal(posts)
+	posts, err := repo.FindAll()
 	if err != nil{
 		resp.WriteHeader(http.StatusInternalServerError)
-		resp.Write([]byte(`{"error": "Error marsahlling the posts array"}`))
+		resp.Write([]byte(`{"error": "Error getting the posts"}`))
 		return
 	}
+
 	resp.WriteHeader(http.StatusOK)
-	resp.Write(result)
+	json.NewEncoder(resp).Encode(posts)
 }
 
 func addPosts(resp http.ResponseWriter, req *http.Request){
-	var post Post
+	resp.Header().Set("Content-type", "application/json")
+	var post entity.Post
 	err := json.NewDecoder(req.Body).Decode(&post)
 	if err != nil{
 		resp.WriteHeader(http.StatusInternalServerError)
 		resp.Write([]byte(`{"error": "Error unmarsahlling the posts array"}`))
 		return
 	}
-	post.Id = len(posts) + 1
-	posts = append(posts, post)
+	post.ID = rand.Int()
+	repo.Save(&post)
 	resp.WriteHeader(http.StatusOK)
-	result, err := json.Marshal(post)
-	resp.Write(result)
-
+	json.NewEncoder(resp).Encode(post)
 }
